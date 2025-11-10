@@ -7,6 +7,7 @@ export interface AssetAPY {
   symbol: string;
   name: string;
   address: string;
+  decimals: number;
   imageUrl?: string;
   supplyAPY: number;
   borrowAPY: number;
@@ -37,6 +38,7 @@ export function extractReserveAPY(reserve: Reserve): AssetAPY | null {
     symbol: reserve.underlyingToken.symbol,
     name: reserve.underlyingToken.name,
     address: reserve.underlyingToken.address,
+    decimals: reserve.underlyingToken.decimals,
     imageUrl: reserve.underlyingToken.imageUrl || undefined,
     supplyAPY: Number(reserve.supplyInfo.apy.value),
     borrowAPY: Number(reserve.borrowInfo.apy.value),

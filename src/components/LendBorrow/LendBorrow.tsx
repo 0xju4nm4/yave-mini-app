@@ -2,14 +2,16 @@
 
 import { calculateAllMarketsAPY, type AssetAPY } from "@/utils/apyCalculator";
 import { chainId, useAaveMarkets } from "@aave/react";
+import { callSmartContract } from "@lemoncash/mini-app-sdk";
 import { useState } from "react";
-import Header from "../Header/Header";
 import TokenIcon from "../TokenIcon/TokenIcon";
 import styles from "./LendBorrow.module.css";
 
+const aaveProxyContract = "0xA238Dd80C259a72e81d7e4664a9801593F98d1c5";
+
 export default function LendBorrow() {
-  const [activeTab, setActiveTab] = useState<"lend" | "borrow">("lend");
   const [selectedAsset, setSelectedAsset] = useState<AssetAPY | null>(null);
+  const [amount, setAmount] = useState<string>("");
 
   const {
     data: markets,
@@ -22,20 +24,42 @@ export default function LendBorrow() {
   const allAssets = marketsAPY.flatMap((market) => market.assets);
 
   // Sort assets by APY (supply for lend, borrow for borrow)
-  const sortedAssets = [...allAssets].sort((a, b) => {
-    const aAPY = activeTab === "lend" ? a.supplyAPY : a.borrowAPY;
-    const bAPY = activeTab === "lend" ? b.supplyAPY : b.borrowAPY;
-    return bAPY - aAPY;
-  });
+  const sortedAssets = [...allAssets]
+    .sort((a, b) => {
+      const aAPY = a.supplyAPY;
+      const bAPY = b.supplyAPY;
+      return bAPY - aAPY;
+    })
+    .filter((asset) => asset.supplyAPY > 0.01);
 
   const handleAssetSelect = (asset: AssetAPY) => {
     setSelectedAsset(asset);
   };
 
+  const supply = async () => {
+    try {
+      const result = await callSmartContract({
+        contractAddress: aaveProxyContract,
+        functionName: "supply",
+        functionParams: [
+          selectedAsset?.address,
+          parseInt(amount, selectedAsset?.decimals),
+          null,
+          null,
+        ],
+        value: "0",
+      });
+      console.log(result);
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  console.log(markets, selectedAsset);
+
   if (loading) {
     return (
       <div className={styles.container}>
-        <Header />
         <div className={styles.content}>
           <div className={styles.loading}>Loading markets...</div>
         </div>
@@ -46,7 +70,6 @@ export default function LendBorrow() {
   if (error) {
     return (
       <div className={styles.container}>
-        <Header />
         <div className={styles.content}>
           <div className={styles.error}>Error loading markets</div>
         </div>
@@ -54,29 +77,13 @@ export default function LendBorrow() {
     );
   }
 
-  return (
-    <div className={styles.container}>
-      <Header />
-      <div className={styles.content}>
-        <div className={styles.tabs}>
-          <button
-            className={`${styles.tab} ${activeTab === "lend" ? styles.active : ""}`}
-            onClick={() => setActiveTab("lend")}
-          >
-            Lend
-          </button>
-          <button
-            className={`${styles.tab} ${activeTab === "borrow" ? styles.active : ""}`}
-            onClick={() => setActiveTab("borrow")}
-          >
-            Borrow
-          </button>
-        </div>
-
-        {selectedAsset ? (
+  if (selectedAsset) {
+    return (
+      <div className={styles.container}>
+        <div className={styles.content}>
           <div className={styles.form}>
             <button className={styles.backButton} onClick={() => setSelectedAsset(null)}>
-              ← Back to markets
+              ← Back
             </button>
 
             <div className={styles.selectedAsset}>
@@ -95,19 +102,21 @@ export default function LendBorrow() {
                 </div>
               </div>
               <div className={styles.assetAPY}>
-                {activeTab === "lend" ? "Supply" : "Borrow"} APY:{" "}
-                <span className={styles.apyValue}>
-                  {activeTab === "lend"
-                    ? selectedAsset.supplyAPYFormatted
-                    : selectedAsset.borrowAPYFormatted}
-                </span>
+                Supply APY:
+                <span className={styles.apyValue}>{selectedAsset.supplyAPYFormatted}%</span>
               </div>
             </div>
 
             <div className={styles.inputGroup}>
               <label className={styles.label}>Amount</label>
               <div className={styles.inputWrapper}>
-                <input type="number" className={styles.input} placeholder="0.00" />
+                <input
+                  type="number"
+                  className={styles.input}
+                  placeholder="0.00"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                />
                 <button className={styles.maxButton}>MAX</button>
               </div>
             </div>
@@ -115,11 +124,7 @@ export default function LendBorrow() {
             <div className={styles.info}>
               <div className={styles.infoRow}>
                 <span className={styles.infoLabel}>APY</span>
-                <span className={styles.infoValue}>
-                  {activeTab === "lend"
-                    ? selectedAsset.supplyAPYFormatted
-                    : selectedAsset.borrowAPYFormatted}
-                </span>
+                <span className={styles.infoValue}>{selectedAsset.supplyAPYFormatted}%</span>
               </div>
               <div className={styles.infoRow}>
                 <span className={styles.infoLabel}>Available</span>
@@ -127,50 +132,49 @@ export default function LendBorrow() {
               </div>
             </div>
 
-            <button className={styles.actionButton}>
-              {activeTab === "lend" ? "Supply" : "Borrow"}
-            </button>
+            <button className={styles.actionButton}>Supply</button>
           </div>
-        ) : (
-          <div className={styles.marketsList}>
-            <div className={styles.marketsHeader}>
-              <h2 className={styles.marketsTitle}>
-                {activeTab === "lend" ? "Supply Markets" : "Borrow Markets"}
-              </h2>
-              <p className={styles.marketsSubtitle}>{sortedAssets.length} assets available</p>
-            </div>
+        </div>
+      </div>
+    );
+  }
 
-            <div className={styles.assetsList}>
-              {sortedAssets.map((asset) => (
-                <button
-                  key={asset.address}
-                  className={styles.assetCard}
-                  onClick={() => handleAssetSelect(asset)}
-                >
-                  <div className={styles.assetInfo}>
-                    <TokenIcon
-                      symbol={asset.symbol}
-                      address={asset.address}
-                      imageUrl={asset.imageUrl}
-                      size={40}
-                      className={styles.assetIcon}
-                    />
-                    <div className={styles.assetText}>
-                      <div className={styles.assetSymbol}>{asset.symbol}</div>
-                      <div className={styles.assetName}>{asset.name}</div>
-                    </div>
-                  </div>
-                  <div className={styles.assetAPY}>
-                    {activeTab === "lend" ? "Supply" : "Borrow"} APY
-                    <span className={styles.apyValue}>
-                      {activeTab === "lend" ? asset.supplyAPYFormatted : asset.borrowAPYFormatted}
-                    </span>
-                  </div>
-                </button>
-              ))}
-            </div>
+  return (
+    <div className={styles.container}>
+      <div className={styles.content}>
+        <div className={styles.marketsList}>
+          <div className={styles.marketsHeader}>
+            <h2 className={styles.marketsTitle}>Supply Markets</h2>
           </div>
-        )}
+
+          <div className={styles.assetsList}>
+            {sortedAssets.map((asset) => (
+              <button
+                key={asset.address}
+                className={styles.assetCard}
+                onClick={() => handleAssetSelect(asset)}
+              >
+                <div className={styles.assetInfo}>
+                  <TokenIcon
+                    symbol={asset.symbol}
+                    address={asset.address}
+                    imageUrl={asset.imageUrl}
+                    size={40}
+                    className={styles.assetIcon}
+                  />
+                  <div className={styles.assetText}>
+                    <div className={styles.assetSymbol}>{asset.symbol}</div>
+                    <div className={styles.assetName}>{asset.name}</div>
+                  </div>
+                </div>
+                <div className={styles.assetAPY}>
+                  Supply APY
+                  <span className={styles.apyValue}>{asset.supplyAPYFormatted}%</span>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
     </div>
   );

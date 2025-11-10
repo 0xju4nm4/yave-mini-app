@@ -5,7 +5,7 @@
 }
 
 .content {
-  margin-top: 56px;
+  margin-top: 62px;
   padding: 20px 16px;
 }
 
@@ -183,8 +183,7 @@
 
 .marketsHeader {
   display: flex;
-  flex-direction: column;
-  gap: 4px;
+  justify-content: center;
 }
 
 .marketsTitle {
@@ -278,15 +277,13 @@
 }
 
 .selectedAsset {
-  padding: 20px;
+  display: flex;
+  justify-content: space-between;
+  padding: 10px;
   background: var(--background-secondary);
   border: 1px solid rgba(67, 101, 255, 0.3);
   border-radius: var(--border-radius-lg);
   margin-bottom: 20px;
-}
-
-.assetHeader {
-  margin-bottom: 12px;
 }
 
 .assetHeaderContent {
@@ -335,7 +332,7 @@
 
 @media (max-width: 480px) {
   .content {
-    margin-top: 52px;
+    margin-top: 62px;
     padding: 16px 12px;
   }
 
@@ -384,9 +381,5 @@
 
   .apyValue {
     font-size: 16px;
-  }
-
-  .selectedAsset {
-    padding: 16px;
   }
 }

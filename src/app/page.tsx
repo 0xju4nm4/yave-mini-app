@@ -1,14 +1,31 @@
 "use client";
 
+import { authenticate } from "@lemoncash/mini-app-sdk";
+
+import Header from "@/components/Header/Header";
 import LendBorrow from "@/components/LendBorrow/LendBorrow";
 import MobileNav, { ViewType } from "@/components/MobileNav/MobileNav";
 import Swap from "@/components/Swap/Swap";
 import UserBalances from "@/components/UserBalances/UserBalances";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import styles from "./page.module.css";
 
 export default function Home() {
   const [activeView, setActiveView] = useState<ViewType>("balances");
+  // const [wallet, setWallet] = useState<string | undefined>(undefined);
+
+  const handleAuthentication = async () => {
+    try {
+      const authentication = await authenticate();
+      console.log(authentication);
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  useEffect(() => {
+    //handleAuthentication();
+  }, []);
 
   const renderView = () => {
     switch (activeView) {
@@ -25,6 +42,7 @@ export default function Home() {
 
   return (
     <div className={styles.app}>
+      <Header />
       {renderView()}
       <MobileNav activeView={activeView} onViewChange={setActiveView} />
     </div>

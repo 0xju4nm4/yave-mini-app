@@ -23,35 +23,6 @@ export default function Header({ isExpanded = false, onExpand }: HeaderProps) {
           </button>
         </div>
       </div>
-      {isExpanded && (
-        <div className={styles.expandedContent}>
-          <div className={styles.userDetails}>
-            <div className={styles.avatar}>
-              <UserOutlined />
-            </div>
-            <div className={styles.userStats}>
-              <div className={styles.stat}>
-                <span className={styles.statLabel}>Wallet</span>
-                <span className={styles.statValue}>0x0000...0000</span>
-              </div>
-              <div className={styles.stat}>
-                <span className={styles.statLabel}>Net Worth</span>
-                <span className={styles.statValue}>$0.00</span>
-              </div>
-            </div>
-          </div>
-          <div className={styles.quickStats}>
-            <div className={styles.quickStat}>
-              <span className={styles.quickStatLabel}>Supplied</span>
-              <span className={styles.quickStatValue}>$0.00</span>
-            </div>
-            <div className={styles.quickStat}>
-              <span className={styles.quickStatLabel}>Borrowed</span>
-              <span className={styles.quickStatValue}>$0.00</span>
-            </div>
-          </div>
-        </div>
-      )}
     </header>
   );
 }
