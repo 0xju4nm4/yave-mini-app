@@ -1,0 +1,74 @@
+.container {
+  min-height: 100vh;
+  background: var(--background);
+  padding-bottom: 80px;
+}
+
+.content {
+  margin-top: 56px;
+  padding: 20px 16px;
+  transition: margin-top 0.3s ease;
+}
+
+/* Adjust for expanded header */
+.container.expanded .content {
+  margin-top: 200px; /* Approximate height when expanded */
+}
+
+.section {
+  margin-bottom: 32px;
+}
+
+.sectionTitle {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--foreground);
+  margin-bottom: 16px;
+  padding: 0 4px;
+}
+
+.assetList,
+.activityList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.emptyState {
+  padding: 40px 20px;
+  text-align: center;
+  background: var(--background-secondary);
+  border: 1px solid rgba(67, 101, 255, 0.1);
+  border-radius: var(--border-radius-lg);
+}
+
+.emptyText {
+  font-size: 16px;
+  color: rgba(255, 255, 255, 0.8);
+  margin-bottom: 8px;
+}
+
+.emptySubtext {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+@media (max-width: 480px) {
+  .content {
+    margin-top: 52px;
+    padding: 16px 12px;
+  }
+
+  .section {
+    margin-bottom: 24px;
+  }
+
+  .sectionTitle {
+    font-size: 16px;
+    margin-bottom: 12px;
+  }
+
+  .emptyState {
+    padding: 32px 16px;
+  }
+}

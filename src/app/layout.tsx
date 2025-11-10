@@ -1,11 +1,15 @@
 "use client";
 
+import { client } from "@/services/aave";
+import { AaveProvider } from "@aave/react";
 import { AntdRegistry } from "@ant-design/nextjs-registry";
-import "@ant-design/v5-patch-for-react-19";
 import { App, ConfigProvider, Layout } from "antd";
+
+import styles from "./landing.module.css";
+
+import "@ant-design/v5-patch-for-react-19";
 import "antd/dist/reset.css";
 import "../styles/globals.css";
-import styles from "./landing.module.css";
 
 const { Content } = Layout;
 
@@ -95,12 +99,13 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
                   background: "transparent !important",
                   minHeight: "100vh",
                 }}
+                className={styles.mainLayout}
               >
-                <Layout className={styles.mainLayout}>
+                <AaveProvider client={client}>
                   <Content className={styles.mainContent} style={{ padding: 0 }}>
                     {children}
                   </Content>
-                </Layout>
+                </AaveProvider>
               </Layout>
             </App>
           </ConfigProvider>
