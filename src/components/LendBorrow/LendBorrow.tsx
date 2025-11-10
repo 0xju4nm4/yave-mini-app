@@ -2,12 +2,11 @@
 
 import { calculateAllMarketsAPY, type AssetAPY } from "@/utils/apyCalculator";
 import { chainId, useAaveMarkets } from "@aave/react";
-import { callSmartContract } from "@lemoncash/mini-app-sdk";
 import { useState } from "react";
 import TokenIcon from "../TokenIcon/TokenIcon";
 import styles from "./LendBorrow.module.css";
 
-const aaveProxyContract = "0xA238Dd80C259a72e81d7e4664a9801593F98d1c5";
+//const aaveProxyContract = "0xA238Dd80C259a72e81d7e4664a9801593F98d1c5";
 
 export default function LendBorrow() {
   const [selectedAsset, setSelectedAsset] = useState<AssetAPY | null>(null);
@@ -36,24 +35,24 @@ export default function LendBorrow() {
     setSelectedAsset(asset);
   };
 
-  const supply = async () => {
-    try {
-      const result = await callSmartContract({
-        contractAddress: aaveProxyContract,
-        functionName: "supply",
-        functionParams: [
-          selectedAsset?.address,
-          parseInt(amount, selectedAsset?.decimals),
-          null,
-          null,
-        ],
-        value: "0",
-      });
-      console.log(result);
-    } catch (error) {
-      console.error(error);
-    }
-  };
+  // const supply = async () => {
+  //   try {
+  //     const result = await callSmartContract({
+  //       contractAddress: aaveProxyContract,
+  //       functionName: "supply",
+  //       functionParams: [
+  //         selectedAsset?.address,
+  //         parseInt(amount, selectedAsset?.decimals),
+  //         null,
+  //         null,
+  //       ],
+  //       value: "0",
+  //     });
+  //     console.log(result);
+  //   } catch (error) {
+  //     console.error(error);
+  //   }
+  // };
 
   console.log(markets, selectedAsset);
 
