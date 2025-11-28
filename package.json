@@ -24,6 +24,7 @@
     "@defuse-protocol/one-click-sdk-typescript": "^0.1.14",
     "@dynamic-labs/ethereum": "^4.47.3",
     "@dynamic-labs/sdk-react-core": "^4.47.3",
+    "@gelatonetwork/smartwallet": "^0.0.28",
     "@lemoncash/mini-app-sdk": "0.1.5",
     "@vercel/blob": "2.0.0",
     "antd": "5.27.3",

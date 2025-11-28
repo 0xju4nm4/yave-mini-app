@@ -8,22 +8,18 @@ import {
   QuoteResponse,
   TokenResponse,
 } from "@defuse-protocol/one-click-sdk-typescript";
-import { DynamicWidget } from "@dynamic-labs/sdk-react-core";
-import { BrowserProvider, Contract } from "ethers";
+import { isEthereumWallet } from "@dynamic-labs/ethereum";
+import { DynamicWidget, useDynamicContext } from "@dynamic-labs/sdk-react-core";
+import { createGelatoSmartWalletClient, sponsored } from "@gelatonetwork/smartwallet";
+import { Interface } from "ethers";
 import { useEffect, useState } from "react";
+import { Account } from "viem";
+import {
+  PrepareAuthorizationParameters,
+  SignAuthorizationReturnType,
+  prepareAuthorization,
+} from "viem/actions";
 import styles from "./page.module.css";
-
-// Extend Window interface for MetaMask
-declare global {
-  interface Window {
-    ethereum?: {
-      request: (args: { method: string; params?: any[] }) => Promise<any>;
-      on: (event: string, handler: (...args: any[]) => void) => void;
-      removeListener: (event: string, handler: (...args: any[]) => void) => void;
-      isMetaMask?: boolean;
-    };
-  }
-}
 
 const apikey =
   "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6IjIwMjUtMDQtMjMtdjEifQ.eyJ2IjoxLCJrZXlfdHlwZSI6ImRpc3RyaWJ1dGlvbl9jaGFubmVsIiwicGFydG5lcl9pZCI6InRudGxhYnMiLCJpYXQiOjE3NjQxNDk3MzgsImV4cCI6MTc5NTY4NTczOH0.PQypuH-lP3j06uXq8WXwwT0CHw_WPVQFYPOjnmiHBbe4RDM7Uhy4gtve4thvzy6Cbrvg5kuFI84EHtH09UO5cerGouJ5fGAWTfuCmpGGqVHu7i4d026wSvYnjtNAVELEdJ1qECRvpZv51KI4-ss_PNjBhpvpsulkmnnJAV-gZMjnObRFflTGKmedcnpDrSsVkDKbHMmi-G65QhIbTH3i2Dmtej1yD8kpJGEEBKrT6b5LJKoZ8xcq1qSEq2uRv3LPmTLqQ3ND-guwfkUlbwCxsqO_pMmHONUg0q886GkBLmGz1nG5gNFO69C5NF7p7Z7zczK28PFCm6J21CTAyO0Fjg";
@@ -39,156 +35,16 @@ const ERC20_ABI = [
   "function decimals() external view returns (uint8)",
 ];
 
-// Network chain IDs mapping
-const CHAIN_IDS: Record<
-  string,
-  { chainId: string; name: string; rpcUrl: string; blockExplorer: string }
-> = {
-  eth: {
-    chainId: "0x1",
-    name: "Ethereum Mainnet",
-    rpcUrl: "https://eth.llamarpc.com",
-    blockExplorer: "https://etherscan.io",
-  },
-  arb: {
-    chainId: "0xa4b1",
-    name: "Arbitrum One",
-    rpcUrl: "https://arb1.arbitrum.io/rpc",
-    blockExplorer: "https://arbiscan.io",
-  },
-  base: {
-    chainId: "0x2105",
-    name: "Base",
-    rpcUrl: "https://mainnet.base.org",
-    blockExplorer: "https://basescan.org",
-  },
-  bsc: {
-    chainId: "0x38",
-    name: "BNB Smart Chain",
-    rpcUrl: "https://bsc-dataseed.binance.org",
-    blockExplorer: "https://bscscan.com",
-  },
-  pol: {
-    chainId: "0x89",
-    name: "Polygon",
-    rpcUrl: "https://polygon-rpc.com",
-    blockExplorer: "https://polygonscan.com",
-  },
-  op: {
-    chainId: "0xa",
-    name: "Optimism",
-    rpcUrl: "https://mainnet.optimism.io",
-    blockExplorer: "https://optimistic.etherscan.io",
-  },
-  avax: {
-    chainId: "0xa86a",
-    name: "Avalanche",
-    rpcUrl: "https://api.avax.network/ext/bc/C/rpc",
-    blockExplorer: "https://snowtrace.io",
-  },
-  gnosis: {
-    chainId: "0x64",
-    name: "Gnosis",
-    rpcUrl: "https://rpc.gnosischain.com",
-    blockExplorer: "https://gnosisscan.io",
-  },
-  xlayer: {
-    chainId: "0x9e",
-    name: "X Layer",
-    rpcUrl: "https://rpc.xlayer.tech",
-    blockExplorer: "https://xlayerscan.io",
-  },
-  monad: {
-    chainId: "0x1a0",
-    name: "Monad",
-    rpcUrl: "https://rpc.monad.xyz",
-    blockExplorer: "https://monadscan.com",
-  },
-  bera: {
-    chainId: "0x80094",
-    name: "Berachain",
-    rpcUrl: "https://bartio.rpc.berachain.com",
-    blockExplorer: "https://berascan.com",
-  },
-};
-
-// Get chain ID for a blockchain name
-const getChainId = (blockchain: string): string | null => {
-  const chain = CHAIN_IDS[blockchain.toLowerCase()];
-  return chain ? chain.chainId : null;
-};
-
-// Switch to the correct network
-const switchNetwork = async (blockchain: string): Promise<boolean> => {
-  if (typeof window === "undefined" || !window.ethereum) {
-    return false;
-  }
-
-  const chainId = getChainId(blockchain);
-  if (!chainId) {
-    alert(`Unsupported blockchain: ${blockchain}`);
-    return false;
-  }
-
-  const chainConfig = CHAIN_IDS[blockchain.toLowerCase()];
-
-  try {
-    // Try to switch to the network
-    await window.ethereum.request({
-      method: "wallet_switchEthereumChain",
-      params: [{ chainId }],
-    });
-    return true;
-  } catch (switchError: any) {
-    // This error code indicates that the chain has not been added to MetaMask
-    if (switchError.code === 4902) {
-      try {
-        // Add the network if it doesn't exist
-        await window.ethereum.request({
-          method: "wallet_addEthereumChain",
-          params: [
-            {
-              chainId,
-              chainName: chainConfig.name,
-              rpcUrls: chainConfig.rpcUrl ? [chainConfig.rpcUrl] : [],
-              blockExplorerUrls: chainConfig.blockExplorer ? [chainConfig.blockExplorer] : [],
-              nativeCurrency: {
-                name: "ETH",
-                symbol: "ETH",
-                decimals: 18,
-              },
-            },
-          ],
-        });
-        return true;
-      } catch (addError) {
-        console.error("Error adding network:", addError);
-        alert(`Failed to add ${chainConfig.name} network. Please add it manually in MetaMask.`);
-        return false;
-      }
-    } else if (switchError.code === 4001) {
-      // User rejected the request
-      alert("Network switch was rejected. Please switch manually in MetaMask.");
-      return false;
-    } else {
-      console.error("Error switching network:", switchError);
-      alert(`Failed to switch to ${chainConfig.name}. Please switch manually in MetaMask.`);
-      return false;
-    }
-  }
-};
-
 export default function Home() {
   const [tokens, setTokens] = useState<TokenResponse[]>([]);
   const [fromToken, setFromToken] = useState<string>("");
   const [toToken, setToToken] = useState<string>("");
   const [amount, setAmount] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
-  const [walletAddress, setWalletAddress] = useState<string>("");
-  const [provider, setProvider] = useState<BrowserProvider | null>(null);
   const [quote, setQuote] = useState<QuoteResponse | null>(null);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [isTransferring, setIsTransferring] = useState(false);
+  const { primaryWallet } = useDynamicContext();
 
   const getTokens = async () => {
     try {
@@ -214,49 +70,7 @@ export default function Home() {
 
   useEffect(() => {
     getTokens();
-    checkWalletConnection();
   }, []);
-
-  const checkWalletConnection = async () => {
-    if (typeof window !== "undefined" && window.ethereum) {
-      try {
-        const provider = new BrowserProvider(window.ethereum);
-        const accounts = await provider.listAccounts();
-        if (accounts.length > 0) {
-          setWalletAddress(accounts[0].address);
-          setProvider(provider);
-        }
-      } catch (error) {
-        console.error("Error checking wallet connection:", error);
-      }
-    }
-  };
-
-  const connectWallet = async () => {
-    if (typeof window === "undefined" || !window.ethereum) {
-      alert("Please install MetaMask!");
-      return;
-    }
-
-    try {
-      const provider = new BrowserProvider(window.ethereum);
-      const accounts = await provider.send("eth_requestAccounts", []);
-      if (accounts.length > 0) {
-        setWalletAddress(accounts[0]);
-        setProvider(provider);
-      }
-    } catch (error) {
-      console.error("Error connecting wallet:", error);
-      alert("Failed to connect wallet. Please try again.");
-    }
-  };
-
-  const disconnectWallet = () => {
-    setWalletAddress("");
-    setProvider(null);
-    setQuote(null);
-    setShowConfirmModal(false);
-  };
 
   const getQuote = async () => {
     if (!fromToken || !toToken || !amount) {
@@ -264,7 +78,7 @@ export default function Home() {
       return;
     }
 
-    if (!walletAddress) {
+    if (!primaryWallet || !isEthereumWallet(primaryWallet)) {
       alert("Please connect your wallet first");
       return;
     }
@@ -289,9 +103,9 @@ export default function Home() {
         depositType: QuoteRequest.depositType.ORIGIN_CHAIN,
         destinationAsset: toToken,
         amount: amountInSmallestUnits,
-        refundTo: walletAddress,
+        refundTo: primaryWallet?.address,
         refundType: QuoteRequest.refundType.ORIGIN_CHAIN,
-        recipient: walletAddress,
+        recipient: primaryWallet?.address,
         recipientType: QuoteRequest.recipientType.DESTINATION_CHAIN,
         deadline: deadline,
       };
@@ -325,7 +139,7 @@ export default function Home() {
   };
 
   const executeTransfer = async () => {
-    if (!quote || !provider || !walletAddress) {
+    if (!quote) {
       alert("Missing required information for transfer");
       return;
     }
@@ -333,25 +147,6 @@ export default function Home() {
     const fromTokenData = tokens.find((t) => t.assetId === fromToken);
     if (!fromTokenData) {
       alert("Token data not found");
-      return;
-    }
-
-    // Check if token is on an EVM chain (ERC20)
-    const evmChains = [
-      "eth",
-      "arb",
-      "base",
-      "bsc",
-      "pol",
-      "op",
-      "avax",
-      "gnosis",
-      "xlayer",
-      "monad",
-      "bera",
-    ];
-    if (!evmChains.includes(fromTokenData.blockchain.toLowerCase())) {
-      alert("Only ERC20 tokens on EVM chains are supported for direct transfer");
       return;
     }
 
@@ -376,81 +171,79 @@ export default function Home() {
       return;
     }
 
-    // Check and switch to the correct network
-    const currentNetwork = await provider.getNetwork();
-    const requiredChainId = getChainId(fromTokenData.blockchain);
-
-    if (!requiredChainId) {
-      alert(`Unsupported blockchain: ${fromTokenData.blockchain}`);
-      setIsTransferring(false);
-      return;
-    }
-
-    // Convert chainId to number for comparison
-    const currentChainIdHex = `0x${currentNetwork.chainId.toString(16)}`;
-    const requiredChainIdLower = requiredChainId.toLowerCase();
-    const currentChainIdLower = currentChainIdHex.toLowerCase();
-
-    if (currentChainIdLower !== requiredChainIdLower) {
-      const chainConfig = CHAIN_IDS[fromTokenData.blockchain.toLowerCase()];
-      const switchConfirmed = confirm(
-        `You need to switch to ${chainConfig.name} to complete this transaction. Switch now?`
-      );
-
-      if (!switchConfirmed) {
-        setIsTransferring(false);
-        return;
-      }
-
-      const switched = await switchNetwork(fromTokenData.blockchain);
-      if (!switched) {
-        setIsTransferring(false);
-        return;
-      }
-
-      // Wait a bit for the network to switch and MetaMask to update
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-    }
-
     setIsTransferring(true);
+
     try {
-      // Always get a fresh provider to ensure we're using the current network
-      if (!window.ethereum) {
-        alert("MetaMask not found. Please refresh the page.");
-        setIsTransferring(false);
+      if (!primaryWallet || !isEthereumWallet(primaryWallet)) {
         return;
       }
 
-      const currentProvider = new BrowserProvider(window.ethereum);
-      const signer = await currentProvider.getSigner();
+      // The Gelato client expects an ethers.js Account as first argument, not a Dynamic Wallet.
+      // You should get the wallet client/account from primaryWallet, and pass it in directly.
+      // Fixed: Dynamic Wallet's `getAccount` does not exist; get the EIP-1193 provider/signer from primaryWallet
+      const client = await primaryWallet?.getWalletClient();
+      const connector = primaryWallet?.connector;
 
-      // Verify we're on the correct network
-      const network = await currentProvider.getNetwork();
-      const currentChainIdHex = `0x${network.chainId.toString(16)}`;
-      const requiredChainIdLower = getChainId(fromTokenData.blockchain)?.toLowerCase();
+      client.account.signAuthorization = async (parameters) => {
+        const preparedAuthorization = await prepareAuthorization(client, parameters);
+        const signedAuthorization = await (
+          connector as unknown as {
+            signAuthorization: (
+              parameters: PrepareAuthorizationParameters<Account>
+            ) => Promise<SignAuthorizationReturnType>;
+          }
+        ).signAuthorization(preparedAuthorization);
 
-      if (currentChainIdHex.toLowerCase() !== requiredChainIdLower) {
-        alert(
-          `Please switch to ${CHAIN_IDS[fromTokenData.blockchain.toLowerCase()]?.name} in MetaMask and try again.`
-        );
-        setIsTransferring(false);
-        return;
-      }
+        return {
+          address: preparedAuthorization.address,
+          chainId: preparedAuthorization.chainId,
+          nonce: preparedAuthorization.nonce,
+          r: signedAuthorization.r,
+          s: signedAuthorization.s,
+          v: signedAuthorization.v,
+          yParity: signedAuthorization.yParity,
+        } as SignAuthorizationReturnType;
+      };
 
-      const tokenContract = new Contract(fromTokenData.contractAddress!, ERC20_ABI, signer);
-      // Get the amount from the quote
-      const transferAmount = quote.quote.amountIn;
+      const smartWalletClient = await createGelatoSmartWalletClient(client, {
+        apiKey: process.env.NEXT_PUBLIC_GELATO_API_KEY!,
+        scw: { type: "gelato" }, // use gelato, kernel, safe, or custom
+      });
 
-      // Execute transfer
-      const tx = await tokenContract.transfer(depositAddress, transferAmount);
-      console.log("Transaction sent:", tx.hash);
+      const Ierc20 = new Interface(ERC20_ABI);
+      const transferData = Ierc20.encodeFunctionData("transfer", [
+        depositAddress,
+        quote.quote.amountIn,
+      ]);
 
-      // Wait for transaction confirmation
-      const receipt = await tx.wait();
-      console.log("Transaction confirmed:", receipt);
+      const result = await smartWalletClient?.execute({
+        payment: sponsored(),
+        calls: [
+          {
+            to: fromTokenData.contractAddress! as `0x${string}`,
+            data: transferData as `0x${string}`,
+            value: BigInt(0),
+          },
+        ],
+      });
+
+      const receipt = await result.wait();
+      console.log(result, receipt);
+
+      // const tokenContract = new Contract(fromTokenData.contractAddress!, ERC20_ABI, signer);
+      // // Get the amount from the quote
+      // const transferAmount = quote.quote.amountIn;
+
+      // // Execute transfer
+      // const tx = await tokenContract.transfer(depositAddress, transferAmount);
+      // console.log("Transaction sent:", tx.hash);
+
+      // // Wait for transaction confirmation
+      // const receipt = await tx.wait();
+      // console.log("Transaction confirmed:", receipt);
 
       const submitDeposit = await OneClickService.submitDepositTx({
-        txHash: tx.hash,
+        txHash: receipt,
         depositAddress: depositAddress,
       });
 
@@ -458,7 +251,7 @@ export default function Home() {
 
       console.log("Submit deposit:", submitDeposit);
 
-      alert(`Transfer successful! Transaction hash: ${tx.hash}`);
+      alert(`Transfer successful! Transaction hash: ${receipt}`);
       setShowConfirmModal(false);
       setQuote(null);
     } catch (error: any) {
@@ -553,7 +346,7 @@ export default function Home() {
         <button
           className={styles.quoteButton}
           onClick={getQuote}
-          disabled={isLoading || !fromToken || !toToken || !amount || !walletAddress}
+          disabled={isLoading || !fromToken || !toToken || !amount}
         >
           {isLoading ? "Getting Quote..." : "Get Quote"}
         </button>
