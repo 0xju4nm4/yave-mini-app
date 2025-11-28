@@ -8,6 +8,7 @@ import {
   QuoteResponse,
   TokenResponse,
 } from "@defuse-protocol/one-click-sdk-typescript";
+import { DynamicWidget } from "@dynamic-labs/sdk-react-core";
 import { BrowserProvider, Contract } from "ethers";
 import { useEffect, useState } from "react";
 import styles from "./page.module.css";
@@ -488,18 +489,7 @@ export default function Home() {
       <div className={styles.swapContainer}>
         <div className={styles.header}>
           <h1 className={styles.title}>Swap Tokens</h1>
-          {walletAddress ? (
-            <div className={styles.walletInfo}>
-              <span className={styles.walletAddress}>{formatAddress(walletAddress)}</span>
-              <button className={styles.disconnectButton} onClick={disconnectWallet}>
-                Disconnect
-              </button>
-            </div>
-          ) : (
-            <button className={styles.connectButton} onClick={connectWallet}>
-              Connect Wallet
-            </button>
-          )}
+          <DynamicWidget />
         </div>
 
         <div className={styles.inputGroup}>

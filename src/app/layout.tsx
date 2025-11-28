@@ -1,10 +1,13 @@
 "use client";
 
 import { AntdRegistry } from "@ant-design/nextjs-registry";
+import { EthereumWalletConnectors } from "@dynamic-labs/ethereum";
+import { DynamicContextProvider } from "@dynamic-labs/sdk-react-core";
 import { App, ConfigProvider, Layout } from "antd";
 
 import styles from "./landing.module.css";
 
+import { supportedNetworks } from "@/constants";
 import "@ant-design/v5-patch-for-react-19";
 import "antd/dist/reset.css";
 import "../styles/globals.css";
@@ -91,19 +94,29 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
               },
             }}
           >
-            <App>
-              <Layout
-                style={{
-                  background: "transparent !important",
-                  minHeight: "100vh",
-                }}
-                className={styles.mainLayout}
-              >
-                <Content className={styles.mainContent} style={{ padding: 0 }}>
-                  {children}
-                </Content>
-              </Layout>
-            </App>
+            <DynamicContextProvider
+              settings={{
+                environmentId: process.env.NEXT_PUBLIC_DYNAMIC_APP_ID!,
+                walletConnectors: [EthereumWalletConnectors],
+                overrides: {
+                  evmNetworks: supportedNetworks,
+                },
+              }}
+            >
+              <App>
+                <Layout
+                  style={{
+                    background: "transparent !important",
+                    minHeight: "100vh",
+                  }}
+                  className={styles.mainLayout}
+                >
+                  <Content className={styles.mainContent} style={{ padding: 0 }}>
+                    {children}
+                  </Content>
+                </Layout>
+              </App>
+            </DynamicContextProvider>
           </ConfigProvider>
         </AntdRegistry>
       </body>
