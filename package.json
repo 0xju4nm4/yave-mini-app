@@ -21,6 +21,7 @@
     "@ant-design/nextjs-registry": "1.1.0",
     "@ant-design/plots": "2.6.4",
     "@ant-design/v5-patch-for-react-19": "1.0.3",
+    "@defuse-protocol/one-click-sdk-typescript": "^0.1.14",
     "@lemoncash/mini-app-sdk": "0.1.5",
     "@vercel/blob": "2.0.0",
     "antd": "5.27.3",
